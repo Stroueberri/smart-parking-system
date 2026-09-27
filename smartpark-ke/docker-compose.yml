@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database with dynamic schema
+  postgres:
+    image: postgres:16-alpine
+    container_name: smartpark-db
+    environment:
+      POSTGRES_USER: smartpark
+      POSTGRES_PASSWORD: smartpark_secret_2026
+      POSTGRES_DB: smartpark_ke
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./database/seed_data.sql:/docker-entrypoint-initdb.d/2-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartpark -d smartpark_ke"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. C++ Slot Allocation & Barrier FSM Engine
+  slot-engine:
+    build:
+      context: ./slot-engine-cpp
+      dockerfile: Dockerfile
+    container_name: smartpark-slot-engine
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+
+  # 3. Java Spring Boot Billing & Daraja M-Pesa STK Push Service
+  billing-service:
+    build:
+      context: ./billing-payment-java
+      dockerfile: Dockerfile
+    container_name: smartpark-billing-service
+    ports:
+      - "8082:8082"
+    environment:
+      SERVER_PORT: 8082
+      GATEWAY_URL: http://web-gateway:5000
+      DARAJA_ENV: sandbox
+      DARAJA_MOCK_MODE: "true"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # 4. Python Web Gateway & API Orchestrator
+  web-gateway:
+    build:
+      context: ./web-gateway-python
+      dockerfile: Dockerfile
+    container_name: smartpark-web-gateway
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      DATABASE_URL: postgresql://smartpark:smartpark_secret_2026@postgres:5432/smartpark_ke
+      CPP_ENGINE_URL: http://slot-engine:8081
+      JAVA_BILLING_URL: http://billing-service:8082
+      SECRET_KEY: smartpark-ke-production-secret-2026
+    depends_on:
+      postgres:
+        condition: service_healthy
+      slot-engine:
+        condition: service_started
+      billing-service:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  pgdata:

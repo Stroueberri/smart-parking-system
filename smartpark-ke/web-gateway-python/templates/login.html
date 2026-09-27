@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="login-container">
+    <div class="card login-card">
+        <div class="card-header text-center">
+            <h2><i class="fa-solid fa-lock"></i> SmartPark KE Access</h2>
+            <p class="subtitle">Secure authentication &amp; role-based access</p>
+        </div>
+        <div class="card-body">
+            <div id="loginAlert" class="alert alert-danger" style="display: none;"></div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="username" name="username" required placeholder="admin / attendant / kiosk">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-key"></i>
+                        <input type="password" id="password" name="password" required value="SmartPark2026!">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+            </form>
+
+            <div class="quick-credentials">
+                <p class="quick-label">One-Click Quick Login:</p>
+                <div class="cred-buttons">
+                    <button type="button" class="btn-chip" onclick="quickFill('admin')">Admin</button>
+                    <button type="button" class="btn-chip" onclick="quickFill('attendant')">Attendant</button>
+                    <button type="button" class="btn-chip" onclick="quickFill('kiosk')">Kiosk</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function quickFill(user) {
+    document.getElementById('username').value = user;
+    document.getElementById('password').value = 'SmartPark2026!';
+    document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alertBox = document.getElementById('loginAlert');
+    alertBox.style.display = 'none';
+
+    const u = document.getElementById('username').value.trim();
+    const p = document.getElementById('password').value;
+
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: u, password: p})
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (data.user.role === 'admin') window.location.href = '/admin';
+            else if (data.user.role === 'attendant') window.location.href = '/attendant';
+            else window.location.href = '/';
+        } else {
+            alertBox.textContent = data.error || 'Authentication failed';
+            alertBox.style.display = 'block';
+        }
+    } catch (err) {
+        alertBox.textContent = 'Server error during login';
+        alertBox.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title or "SmartPark KE — Automated Parking Management" }}</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-brand">
+            <i class="fa-solid fa-square-parking text-primary"></i>
+            <span class="brand-text">SmartPark <span class="badge-ke">KE</span></span>
+            <span class="sub-tag">Intelligent Parking System</span>
+        </div>
+        <nav class="nav-links">
+            <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">
+                <i class="fa-solid fa-map"></i> Driver Display
+            </a>
+            <a href="/attendant" class="nav-item {% if request.path == '/attendant' %}active{% endif %}">
+                <i class="fa-solid fa-cash-register"></i> Exit Kiosk &amp; M-Pesa
+            </a>
+            <a href="/admin" class="nav-item {% if request.path == '/admin' %}active{% endif %}">
+                <i class="fa-solid fa-chart-line"></i> Admin Dashboard
+            </a>
+        </nav>
+        <div class="nav-right">
+            <div class="system-status">
+                <span class="pulse-indicator"></span>
+                <span class="status-label">Engine Online</span>
+            </div>
+            {% if session.get('username') %}
+                <span class="user-chip"><i class="fa-solid fa-user-circle"></i> {{ session.get('username') }}</span>
+                <a href="/api/auth/logout" class="btn-logout" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+            {% else %}
+                <a href="/login" class="btn-login"><i class="fa-solid fa-lock"></i> Login</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <main class="main-container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2026 SmartPark KE &bull; Automated Microservices: Python (Gateway) + C++ (Slot Engine) + Java (M-Pesa Daraja)</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="kiosk-page-header">
+    <div class="header-text">
+        <h1><i class="fa-solid fa-cash-register"></i> Attendant &amp; Exit Checkout Kiosk</h1>
+        <p class="subtitle">Automatic fee calculation, Safaricom Daraja STK Push &amp; automated barrier release</p>
+    </div>
+    <div class="barrier-live-pill" id="barrierHeaderPill">
+        <span class="gate-icon"><i class="fa-solid fa-bars"></i></span>
+        <span>Barrier: <strong id="barrierCurrentState">CLOSED</strong></span>
+    </div>
+</div>
+
+<div class="kiosk-grid">
+    <!-- Left Column: Search & Session Bill Card -->
+    <div class="kiosk-left">
+        <div class="card checkout-search-card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-magnifying-glass"></i> Vehicle Exit Lookup</h3>
+            </div>
+            <div class="card-body">
+                <form id="lookupForm">
+                    <div class="search-input-group">
+                        <input type="text" id="lookupPlate" placeholder="Enter Plate Number (e.g. KDA 101A)" required>
+                        <button type="submit" class="btn btn-primary" id="btnSearch">
+                            <i class="fa-solid fa-search"></i> Find Bill
+                        </button>
+                    </div>
+                </form>
+                <div class="quick-plates" id="activePlatesList">
+                    <!-- Populated with currently active plates for one-click testing -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Bill Computation Card -->
+        <div class="card bill-card" id="billCard" style="display: none;">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-receipt"></i> Parking Invoice</h3>
+                <span class="badge badge-unpaid" id="paymentStatusBadge">UNPAID</span>
+            </div>
+            <div class="card-body">
+                <div class="bill-row">
+                    <span class="label">Vehicle Plate:</span>
+                    <span class="value font-mono" id="billPlate">--</span>
+                </div>
+                <div class="bill-row">
+                    <span class="label">Assigned Bay:</span>
+                    <span class="value" id="billSlot">--</span>
+                </div>
+                <div class="bill-row">
+                    <span class="label">Arrival Time:</span>
+                    <span class="value" id="billEntryTime">--</span>
+                </div>
+                <div class="bill-row">
+                    <span class="label">Departure Time:</span>
+                    <span class="value" id="billExitTime">--</span>
+                </div>
+                <div class="bill-row">
+                    <span class="label">Duration Parked:</span>
+                    <span class="value highlight" id="billDuration">--</span>
+                </div>
+                <div class="bill-row">
+                    <span class="label">Applicable Tariff:</span>
+                    <span class="value" id="billTariffDesc">--</span>
+                </div>
+                <hr class="bill-divider">
+                <div class="bill-total-row">
+                    <span class="total-label">Total Fee Due:</span>
+                    <span class="total-amount" id="billAmount">Kshs 0.00</span>
+                </div>
+
+                <!-- M-Pesa STK Push Section -->
+                <div class="stk-section" id="stkSection">
+                    <h4><i class="fa-solid fa-mobile-screen-button text-mpesa"></i> Lipa na M-Pesa Online (STK Push)</h4>
+                    <form id="stkForm">
+                        <input type="hidden" id="stkSessionId">
+                        <div class="form-group">
+                            <label for="phoneNumber">Driver Mobile Number:</label>
+                            <div class="input-with-icon">
+                                <i class="fa-solid fa-phone"></i>
+                                <input type="tel" id="phoneNumber" placeholder="e.g. 0712345678 or 254712345678" value="0712345678" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-mpesa btn-block" id="btnStkPush">
+                            <i class="fa-solid fa-paper-plane"></i> Send M-Pesa STK Push
+                        </button>
+                    </form>
+
+                    <!-- STK Status & Sandbox Trigger -->
+                    <div class="stk-status-box" id="stkStatusBox" style="display: none;">
+                        <div class="stk-status-header">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
+                            <span id="stkStatusText">STK Prompt dispatched to customer phone...</span>
+                        </div>
+                        <p class="stk-hint">Checkout Request ID: <span class="font-mono" id="stkCheckoutId">--</span></p>
+                        <button type="button" class="btn btn-success btn-block" id="btnSimulatePin">
+                            <i class="fa-solid fa-key"></i> Simulate Customer Enters M-Pesa PIN (Confirm Payment)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Paid Confirmation State -->
+                <div class="paid-confirmation-box" id="paidConfirmationBox" style="display: none;">
+                    <div class="paid-icon"><i class="fa-solid fa-circle-check"></i></div>
+                    <h3>Payment Confirmed!</h3>
+                    <p>M-Pesa Receipt: <strong id="receiptNumber">--</strong></p>
+                    <p class="barrier-action-text"><i class="fa-solid fa-arrow-up"></i> Exit Barrier Opened. Driver may exit.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Interactive Barrier Actuator Simulation & SMS Receipt Preview -->
+    <div class="kiosk-right">
+        <!-- Barrier Actuator Simulator Card -->
+        <div class="card barrier-card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-road-barrier"></i> Exit Barrier Actuator Simulator</h3>
+            </div>
+            <div class="card-body barrier-visualizer">
+                <div class="traffic-light" id="trafficLight">
+                    <span class="light red active" id="lightRed"></span>
+                    <span class="light green" id="lightGreen"></span>
+                </div>
+
+                <div class="barrier-scene">
+                    <div class="barrier-post"></div>
+                    <div class="barrier-arm" id="barrierArm">
+                        <span class="arm-stripe"></span>
+                        <span class="arm-stripe"></span>
+                        <span class="arm-stripe"></span>
+                    </div>
+                    <div class="vehicle-silhouette" id="vehicleSilhouette">
+                        <i class="fa-solid fa-car-side"></i>
+                    </div>
+                </div>
+
+                <div class="barrier-controls">
+                    <button class="btn btn-sm btn-outline" id="btnVehiclePassed">
+                        <i class="fa-solid fa-car"></i> Vehicle Passed (Clear Sensor)
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" id="btnForceClose">
+                        <i class="fa-solid fa-circle-xmark"></i> Force Close Gate
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SMS Receipt Notification Preview Card (Module 11) -->
+        <div class="card sms-card" id="smsCard">
+            <div class="card-header">
+                <h4><i class="fa-solid fa-comment-sms"></i> Outbound SMS Receipt (Module 11)</h4>
+            </div>
+            <div class="card-body">
+                <div class="phone-mockup">
+                    <div class="sms-bubble" id="smsBubble">
+                        <em>Awaiting payment completion to dispatch digital parking receipt...</em>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/attendant.js"></script>
+{% endblock %}

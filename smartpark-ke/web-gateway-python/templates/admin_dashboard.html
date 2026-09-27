@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div class="header-text">
+        <h1><i class="fa-solid fa-chart-line"></i> Operations &amp; Revenue Analytics</h1>
+        <p class="subtitle">System performance, B-Tree indexed historical reports &amp; dynamic tariff control</p>
+    </div>
+    <div class="admin-quick-actions">
+        <button class="btn btn-outline" onclick="loadDashboardData()"><i class="fa-solid fa-rotate"></i> Refresh Data</button>
+    </div>
+</div>
+
+<!-- Metric Overview Cards -->
+<div class="admin-metrics-grid">
+    <div class="metric-card">
+        <div class="metric-icon bg-green"><i class="fa-solid fa-money-bill-wave"></i></div>
+        <div class="metric-info">
+            <span class="metric-label">Total Revenue</span>
+            <span class="metric-value" id="totalRevenue">Kshs 0.00</span>
+            <span class="metric-sub">Lipa na M-Pesa verified</span>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon bg-blue"><i class="fa-solid fa-percent"></i></div>
+        <div class="metric-info">
+            <span class="metric-label">Occupancy Rate</span>
+            <span class="metric-value" id="occupancyRate">0.0%</span>
+            <span class="metric-sub" id="occupancySub">0 / 30 slots occupied</span>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon bg-orange"><i class="fa-solid fa-car-side"></i></div>
+        <div class="metric-info">
+            <span class="metric-label">Active Parked</span>
+            <span class="metric-value" id="activeVehicles">0</span>
+            <span class="metric-sub">Vehicles currently inside</span>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon bg-purple"><i class="fa-solid fa-circle-check"></i></div>
+        <div class="metric-info">
+            <span class="metric-label">Completed Exits</span>
+            <span class="metric-value" id="completedSessions">0</span>
+            <span class="metric-sub">Sessions processed</span>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="admin-charts-grid">
+    <div class="card chart-card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-chart-column"></i> Revenue Transactions (Kshs)</h3>
+        </div>
+        <div class="card-body">
+            <canvas id="revenueChart" height="220"></canvas>
+        </div>
+    </div>
+    <div class="card chart-card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-chart-pie"></i> Zone Occupancy Breakdown</h3>
+        </div>
+        <div class="card-body">
+            <canvas id="occupancyChart" height="220"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Overstay Alerts & Barrier FSM Monitor Row -->
+<div class="admin-dual-grid">
+    <!-- Overstay Alerts (Module 4 & 9) -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-triangle-exclamation text-warning"></i> Overstay Alerts (&gt; 6 Hours)</h3>
+            <span class="badge badge-warning" id="overstayBadge">0 Overstaying</span>
+        </div>
+        <div class="card-body">
+            <p class="section-desc">Identified in O(1) time using Module 4's entry_time Min-Heap.</p>
+            <div class="table-responsive">
+                <table class="data-table" id="overstayTable">
+                    <thead>
+                        <tr>
+                            <th>Plate</th>
+                            <th>Bay</th>
+                            <th>Entry Time</th>
+                            <th>Duration</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="overstayTableBody">
+                        <tr><td colspan="5" class="text-center text-muted">No vehicles currently overstaying.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barrier FSM Audit Trail (Module 7) -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-road-barrier"></i> Barrier FSM Audit Trail (LIFO Stack)</h3>
+            <span class="badge badge-primary" id="fsmCurrentState">CLOSED</span>
+        </div>
+        <div class="card-body">
+            <p class="section-desc">Inspecting chronological transitions popped from C++ LIFO Stack.</p>
+            <div class="stack-history-list" id="barrierStackHistory">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Tariff Management Row (Section 5) -->
+<div class="card tariff-admin-card">
+    <div class="card-header">
+        <h3><i class="fa-solid fa-sliders"></i> Dynamic Tariff Configuration</h3>
+        <button class="btn btn-sm btn-primary" onclick="showAddTariffModal()"><i class="fa-solid fa-plus"></i> Add Tariff Tier</button>
+    </div>
+    <div class="card-body">
+        <p class="section-desc">Data-driven tariff table stored in database. Calculations update dynamically without service restart.</p>
+        <div class="table-responsive">
+            <table class="data-table" id="tariffTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Max Duration</th>
+                        <th>Fee (Kshs)</th>
+                        <th>Tier Description</th>
+                    </tr>
+                </thead>
+                <tbody id="tariffTableBody">
+                    <!-- Populated via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Tariff Modal -->
+<div class="modal-backdrop" id="tariffModal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Add New Tariff Tier</h3>
+            <button class="btn-close" onclick="closeTariffModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="addTariffForm">
+                <div class="form-group">
+                    <label>Maximum Minutes:</label>
+                    <input type="number" id="newMaxMinutes" required placeholder="e.g. 180">
+                </div>
+                <div class="form-group">
+                    <label>Fee (Kshs):</label>
+                    <input type="number" id="newFee" step="0.5" required placeholder="e.g. 75">
+                </div>
+                <div class="form-group">
+                    <label>Description:</label>
+                    <input type="text" id="newDescription" required placeholder="e.g. Up to 3 hours promo">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeTariffModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Tier</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/admin.js"></script>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="display-header">
+    <div class="display-title-group">
+        <h1><i class="fa-solid fa-car"></i> Live Parking Availability Display</h1>
+        <p class="subtitle">Real-time slot occupancy &amp; automated nearest-slot guidance</p>
+    </div>
+    <div class="stats-ribbon">
+        <div class="stat-card free">
+            <span class="stat-num" id="freeSlotsCount">--</span>
+            <span class="stat-label">Available Bays</span>
+        </div>
+        <div class="stat-card occupied">
+            <span class="stat-num" id="occupiedSlotsCount">--</span>
+            <span class="stat-label">Occupied Bays</span>
+        </div>
+        <div class="stat-card total">
+            <span class="stat-num" id="totalSlotsCount">30</span>
+            <span class="stat-label">Total Capacity</span>
+        </div>
+    </div>
+</div>
+
+<div class="display-layout">
+    <!-- Left Column: Visual 2D Slot Grid Matrix -->
+    <div class="grid-section">
+        <div class="zone-nav" id="zoneTabs">
+            <button class="zone-tab active" data-zone="all"><i class="fa-solid fa-border-all"></i> All Zones</button>
+            <button class="zone-tab" data-zone="1"><i class="fa-solid fa-layer-group"></i> Zone A (Ground - Entrance)</button>
+            <button class="zone-tab" data-zone="2"><i class="fa-solid fa-layer-group"></i> Zone B (Ground - West)</button>
+            <button class="zone-tab" data-zone="3"><i class="fa-solid fa-stairs"></i> Zone C (Upper Deck)</button>
+        </div>
+
+        <div class="legend-bar">
+            <span class="legend-item"><span class="box box-free"></span> Green: Available</span>
+            <span class="legend-item"><span class="box box-occupied"></span> Red: Occupied</span>
+            <span class="legend-item"><span class="box box-allocated"></span> Pulsing Blue: Nearest Allocated</span>
+        </div>
+
+        <div class="slots-container" id="slotsGrid">
+            <!-- Dynamically populated via JS/WebSocket -->
+            <div class="loading-spinner"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading live slot map...</div>
+        </div>
+    </div>
+
+    <!-- Right Column: Vehicle Arrival Kiosk & Nearest Slot Guidance -->
+    <div class="kiosk-section">
+        <div class="card arrival-card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-id-card"></i> Vehicle Arrival Check-In</h3>
+            </div>
+            <div class="card-body">
+                <form id="entryForm">
+                    <div class="form-group">
+                        <label for="plateNumber">Plate Number (Kenya):</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-car-side"></i>
+                            <input type="text" id="plateNumber" name="plateNumber" placeholder="e.g. KDA 123A, KCB 456X" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicleType">Vehicle Type:</label>
+                        <select id="vehicleType" name="vehicleType">
+                            <option value="car">Personal Car / Sedan / SUV</option>
+                            <option value="motorbike">Motorbike / Boda Boda</option>
+                            <option value="van">Van / Matatu / Pickup</option>
+                            <option value="truck">Light Truck</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" id="btnAllocate">
+                        <i class="fa-solid fa-bullseye"></i> Register Arrival &amp; Get Nearest Slot
+                    </button>
+                </form>
+
+                <div class="quick-plates">
+                    <span class="quick-label">Quick Test Plates:</span>
+                    <button type="button" class="btn-chip" onclick="fillPlate('KDA 101A')">KDA 101A</button>
+                    <button type="button" class="btn-chip" onclick="fillPlate('KDB 202B')">KDB 202B</button>
+                    <button type="button" class="btn-chip" onclick="fillPlate('KDC 303C')">KDC 303C</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nearest Allocated Slot Result Card -->
+        <div class="card allocation-result-card" id="allocationResultCard" style="display: none;">
+            <div class="result-banner">
+                <i class="fa-solid fa-circle-check"></i> Slot Allocated!
+            </div>
+            <div class="allocated-slot-badge" id="allocatedSlotLabel">A1</div>
+            <div class="allocation-details">
+                <p><strong>Assigned Plate:</strong> <span id="allocatedPlate">KDA 123A</span></p>
+                <p><strong>Walking Distance:</strong> <span id="allocatedDistance">5.0 m</span></p>
+                <p><strong>Zone:</strong> <span id="allocatedZone">Zone A (Ground Floor)</span></p>
+                <p><strong>Position:</strong> Row <span id="allocatedRow">1</span>, Bay <span id="allocatedCol">1</span></p>
+                <div class="barrier-open-indicator">
+                    <i class="fa-solid fa-arrow-up"></i> Entry Barrier Opened &bull; Proceed to Slot
+                </div>
+            </div>
+        </div>
+
+        <!-- Tariff Schedule Card -->
+        <div class="card tariff-card">
+            <div class="card-header">
+                <h4><i class="fa-solid fa-tags"></i> Parking Tariff (Fixed Rates)</h4>
+            </div>
+            <div class="card-body">
+                <table class="tariff-table">
+                    <thead>
+                        <tr>
+                            <th>Duration</th>
+                            <th>Fee (Kshs)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Up to 30 mins</td><td><span class="badge-free">FREE</span></td></tr>
+                        <tr><td>Up to 2 hours</td><td>50</td></tr>
+                        <tr><td>Up to 4 hours</td><td>100</td></tr>
+                        <tr><td>Up to 6 hours</td><td>300</td></tr>
+                        <tr><td>Over 6 hours</td><td>500</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/driver.js"></script>
+{% endblock %}
